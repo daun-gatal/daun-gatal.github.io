@@ -1,11 +1,11 @@
 {
  "updated": "2026-11-14",
- "contributions": 2588,
- "commits": 1821,
+ "contributions": 2589,
+ "commits": 1822,
  "prs_opened": 273,
- "prs_merged": 330,
+ "prs_merged": 269,
  "longest_streak": 20,
- "active_days": 177,
+ "active_days": 176,
  "calendar": [
   "3110001",
   "1100001",
@@ -38,7 +38,7 @@
   "0100001",
   "0000000",
   "1100422",
-  "1121102",
+  "1021102",
   "2100111",
   "0100000",
   "0000011",
@@ -112,7 +112,7 @@
   },
   {
    "month": "2026-11",
-   "count": 323
+   "count": 324
   }
  ],
  "chouse": {
