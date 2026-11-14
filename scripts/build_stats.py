@@ -8,6 +8,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import urllib.error
 import urllib.request
 from xml.sax.saxutils import escape
 
@@ -66,6 +67,38 @@ LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
           "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
 
+def star_history(repo_info, today):
+    """Monthly cumulative stars.
+
+    Listing stargazers with dates is refused (403) for the Actions GITHUB_TOKEN,
+    so when that happens keep the history saved last run and set the current
+    month to today's live star count.
+    """
+    months = []
+    cur = dt.date.fromisoformat(repo_info["created"]).replace(day=1)
+    while cur <= today:
+        months.append(cur.strftime("%Y-%m"))
+        cur = (cur.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
+    try:
+        stars = rest_all(f"repos/{USER}/{CHOUSE}/stargazers",
+                         accept="application/vnd.github.star+json")
+        starred = sorted(s["starred_at"][:7] for s in stars)
+        return [{"month": m, "stars": sum(1 for s in starred if s <= m)} for m in months]
+    except urllib.error.HTTPError as err:
+        print(f"stargazers unavailable ({err.code}); reusing saved history")
+    saved = {}
+    path = ROOT / "data" / "stats.json"
+    if path.exists():
+        saved = {p["month"]: p["stars"]
+                 for p in json.loads(path.read_text())["chouse"].get("star_history", [])}
+    out, last = [], 0
+    for m in months:
+        last = saved.get(m, last)
+        out.append({"month": m, "stars": last})
+    out[-1]["stars"] = repo_info["stars"]
+    return out
+
+
 def collect():
     today = dt.date.today()
     cc = graphql("""{ user(login: "%s") { contributionsCollection {
@@ -104,17 +137,7 @@ def collect():
         }
 
     chouse = repo(CHOUSE)
-    stars = rest_all(f"repos/{USER}/{CHOUSE}/stargazers",
-                     accept="application/vnd.github.star+json")
-    star_months = sorted(s["starred_at"][:7] for s in stars)
-    first = dt.date.fromisoformat(chouse["created"]).replace(day=1)
-    history, cur, total = [], first, 0
-    while cur <= today:
-        key = cur.strftime("%Y-%m")
-        total = sum(1 for m in star_months if m <= key)
-        history.append({"month": key, "stars": total})
-        cur = (cur.replace(day=28) + dt.timedelta(days=4)).replace(day=1)
-    chouse["star_history"] = history
+    chouse["star_history"] = star_history(chouse, today)
 
     return {
         "updated": today.isoformat(),
